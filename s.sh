@@ -85,43 +85,7 @@ add_fund() {
     ask_details
     echo -e "${BLUE}💸 Adding funds...${NC}"
     amount=45000000000000000
-    max_attempts=3
-    attempt=1
-    while [ $attempt -le $max_attempts ]; do
-        echo -e "${BLUE}📤 Funding attempt $attempt/$max_attempts with $eth_amount ETH...${NC}"
-        fund_output=$(irys fund "$amount" -n devnet -t ethereum -w "$PRIVATE_KEY" --provider-url "$RPC_URL" 2>&1)
-        echo "$fund_output" | tee -a "$LOG_FILE"
-        
-        # Check if funding was successful
-        if echo "$fund_output" | grep -q "Funded"; then
-            echo -e "${GREEN}✅ Funding request sent. Checking balance...${NC}"
-            # Check balance up to 3 times with 10-second delays
-            for check in {1..3}; do
-                balance_eth=$(get_balance_eth)
-                echo -e "${BLUE}🔍 Balance check $check/3: $balance_eth ETH${NC}"
-                if [ "$(awk "BEGIN {if ($balance_eth > 0) print 1; else print 0}")" = "1" ]; then
-                    echo -e "${GREEN}✅ Balance updated: $balance_eth ETH${NC}"
-                    return 0
-                fi
-                if [ $check -lt 3 ]; then
-                    echo -e "${BLUE}⏰ Waiting 10 seconds before next balance check...${NC}"
-                    sleep 10
-                fi
-            done
-            echo -e "${YELLOW}⚠️ Balance still 0 after 3 checks.${NC}"
-        else
-            echo -e "${YELLOW}⚠️ Funding failed: $fund_output${NC}"
-        fi
-        
-        attempt=$((attempt + 1))
-        if [ $attempt -le $max_attempts ]; then
-            echo -e "${BLUE}⏰ Waiting 10 seconds before retrying funding...${NC}"
-            sleep 10
-        fi
-    done
-    
-    echo -e "${RED}❌ Failed to fund after $max_attempts attempts. Balance still 0. Check logs in $LOG_FILE. 😔${NC}"
-    exit 1
+    irys fund "$amount" -n devnet -t ethereum -w "$PRIVATE_KEY" --provider-url "$RPC_URL"
 }
 
 # Get balance in ETH
