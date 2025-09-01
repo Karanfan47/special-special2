@@ -46,23 +46,6 @@ QUERIES=(
 PIXABAY_DOWNLOADER_PY="$HOME/pixabay_downloader.py"
 PEXELS_DOWNLOADER_PY="$HOME/pexels_downloader.py"
 
-show_header() {
-    clear
-    echo -e "${BLUE}${BOLD}"
-    echo "┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐"
-    echo "│ ██╗░░██╗██╗░░░██║░██████╗████████╗██╗░░░░░███████╗  ░█████╗░██╗██████╗░██████╗░██████╗░░█████╗░██████╗░░██████╗ │"
-    echo "│ ██║░░██║██║░░░██║██╔════╝╚══██╔══╝██║░░░░░██╔════╝  ██╔══██╗██║██╔══██╗██╔══██╗██╔══██╗██╔══██╗██╔══██╗██╔════╝ │"
-    echo "│ ███████║██║░░░██║╚█████╗░░░░██║░░░██║░░░░░█████╗░░  ███████║██║██████╔╝██║░░██║██████╔╝██║░░██║██████╔╝╚█████╗░ │"
-    echo "│ ██╔══██║██║░░░██║░╚═══██╗░░░██║░░░██║░░░░░██╔══╝░░  ██╔══██║██║██╔══██╗██║░░██║██╔══██╗██║░░██║██╔═══╝░░╚═══██╗ │"
-    echo "│ ██║░░██║╚██████╔╝██████╔╝░░░██║░░░███████╗███████╗  ██║░░██║██║██║░░██║██████╔╝██║░░██║╚█████╔╝██║░░░░░██████╔╝ │"
-    echo "│ ╚═╝░░╚═╝░╚═════╝░╚═════╝░░░░╚═╝░░░╚══════╝╚══════╝  ╚═╝░░╚═╝╚═╝╚═╝░░╚═╝╚═════╝░╚═╝░░╚═╝░╚════╝░╚═╝░░░░░╚═════╝░ │"
-    echo "└───────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘"
-    echo -e "${YELLOW} 🚀 Pipe Node Manager by Aashish 🚀${NC}"
-    echo -e "${YELLOW} GitHub: https://github.com/HustleAirdrops${NC}"
-    echo -e "${YELLOW} Telegram: https://t.me/Hustle_Airdrops${NC}"
-    echo -e "${GREEN}===============================================================================${NC}"
-}
-
 # Create Python scripts for video downloads
 create_python_scripts() {
     if [ ! -f "$PIXABAY_DOWNLOADER_PY" ]; then
@@ -653,14 +636,18 @@ upload_file() {
 
 # Main upload function
 daily_upload() {
-    show_header
     setup_venv
+    rm -f "$HOME/video_downloader.py" "$HOME/pixabay_downloader.py" "$HOME/pexels_downloader.py" 2>/dev/null
     create_python_scripts
     load_config
     source "$VENV_DIR/bin/activate"
     
     # Determine number of files to upload (5 to 10)
     num_files=$((RANDOM % 6 + 5))
+    
+    # Ensure ~60% videos, 40% images
+    num_videos=$(( (num_files * 60 + 50) / 100 )) # Rounds to ~60%
+    num_images=$((num_files - num_videos))
     
     # Get balance and calculate max upload size per file
     balance_eth=$(get_balance_eth)
@@ -671,30 +658,9 @@ daily_upload() {
     max_mb_per_file=$(awk "BEGIN {print int($daily_max_mb / $num_files)}")
     max_mb_per_file=$(( max_mb_per_file < 1 ? 1 : max_mb_per_file > 50 ? 50 : max_mb_per_file ))
     
-    echo -e "${BLUE}📊 Balance: ${balance_eth} ETH, Daily Max: ${daily_max_mb} MB, Uploading ${num_files} files (max ${max_mb_per_file} MB each)${NC}"
+    echo -e "${BLUE}📊 Balance: ${balance_eth} ETH, Daily Max: ${daily_max_mb} MB, Uploading ${num_files} files (${num_videos} videos, ${num_images} images, max ${max_mb_per_file} MB each)${NC}"
     
-    # Randomly decide mix of images and videos
-    num_images=$((RANDOM % ($num_files + 1)))
-    num_videos=$((num_files - num_images))
-    
-    # Upload images
-    for ((i=0; i<num_images; i++)); do
-        width=$((RANDOM % 1921 + 640))
-        height=$((RANDOM % 1081 + 480))
-        if (( RANDOM % 2 )); then grayscale="?grayscale"; else grayscale=""; fi
-        blur=$((RANDOM % 11))
-        if [ $blur -gt 0 ]; then blur_param="&blur=$blur"; else blur_param=""; fi
-        seed=$((RANDOM % 10000))
-        if [ -n "$seed" ]; then seed_path="/seed/$seed"; else seed_path=""; fi
-        url="https://picsum.photos$seed_path/$width/$height$grayscale$blur_param"
-        random_suffix=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 8 | head -n 1)
-        output_file="picsum_$random_suffix.jpg"
-        echo -e "${BLUE}📥 Downloading image from Picsum: $url ... 🖼️${NC}"
-        curl -L -o "$output_file" "$url" 2>&1 | tee -a "$LOG_FILE"
-        upload_file "$output_file" "$output_file"
-    done
-    
-    # Upload videos
+    # Upload videos (~60%)
     for ((i=0; i<num_videos; i++)); do
         query_index=$((RANDOM % ${#QUERIES[@]}))
         query="${QUERIES[$query_index]}"
@@ -709,18 +675,43 @@ daily_upload() {
             python3 "$PIXABAY_DOWNLOADER_PY" "$query" "$output_file" "$max_mb_per_file" 2>&1 | tee -a "$LOG_FILE"
         fi
         upload_file "$output_file" "$output_file"
+        # Random delay between uploads (30-50 seconds)
+        upload_delay=$((RANDOM % 21 + 30))
+        echo -e "${BLUE}⏰ Waiting ${upload_delay} seconds before next upload...${NC}"
+        sleep $upload_delay
+    done
+    
+    # Upload images (~40%)
+    for ((i=0; i<num_images; i++)); do
+        width=$((RANDOM % 1921 + 640))
+        height=$((RANDOM % 1081 + 480))
+        if (( RANDOM % 2 )); then grayscale="?grayscale"; else grayscale=""; fi
+        blur=$((RANDOM % 11))
+        if [ $blur -gt 0 ]; then blur_param="&blur=$blur"; else blur_param=""; fi
+        seed=$((RANDOM % 10000))
+        if [ -n "$seed" ]; then seed_path="/seed/$seed"; else seed_path=""; fi
+        url="https://picsum.photos$seed_path/$width/$height$grayscale$blur_param"
+        random_suffix=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 8 | head -n 1)
+        output_file="picsum_$random_suffix.jpg"
+        echo -e "${BLUE}📥 Downloading image from Picsum: $url ... 🖼️${NC}"
+        curl -L -o "$output_file" "$url" 2>&1 | tee -a "$LOG_FILE"
+        upload_file "$output_file" "$output_file"
+        # Random delay between uploads (30-50 seconds), except for the last file
+        if [ $i -lt $((num_images - 1)) ] || [ $num_videos -gt 0 ]; then
+            upload_delay=$((RANDOM % 21 + 30))
+            echo -e "${BLUE}⏰ Waiting ${upload_delay} seconds before next upload...${NC}"
+            sleep $upload_delay
+        fi
     done
     
     deactivate
-    echo -e "${GREEN}✅ Daily upload completed! Uploaded ${num_files} files. 🎉${NC}"
+    echo -e "${GREEN}✅ Daily upload completed! Uploaded ${num_files} files (${num_videos} videos, ${num_images} images). 🎉${NC}"
 }
 
-# Infinite loop: run once per day with random 18–22h delay
 while true; do
-    # Fixed 1 minute delay
-    random_delay=60
-    echo -e "${BLUE}⏰ Waiting $((random_delay / 60)) minute before next upload...${NC}"
+    # Random delay between 18h (64800s) and 22h (79200s)
+    random_delay=$((RANDOM % 14401 + 64800))
+    echo -e "${BLUE}⏰ Waiting $((random_delay / 3600))h $(((random_delay % 3600) / 60))m before next upload...${NC}"
     sleep $random_delay
     daily_upload
 done
-
