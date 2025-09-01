@@ -19,11 +19,17 @@ CONFIG_FILE="$HOME/.irys_config.json"
 DETAILS_FILE="$HOME/irys_file_details.json"
 VENV_DIR="$HOME/irys_venv"
 
-# Hardcoded API keys
+# Generate unique suffixes for file names
+TIMESTAMP=$(date +%s)
+RANDOM_SUFFIX=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 8 | head -n 1)
+
+# Hardcoded API keys with unique file names
 PEXELS_API_KEY="iur1f5KGwvSIR1xr8I1t3KR3NP88wFXeCyV12ibHnioNXQYTy95KhE69"
 PIXABAY_API_KEY="51848865-07253475f9fc0309b02c38a39"
-echo "$PEXELS_API_KEY" > "$HOME/.pexels_api_key"
-echo "$PIXABAY_API_KEY" > "$HOME/.pixabay_api_key"
+PEXELS_API_KEY_FILE="$HOME/.pexels_api_key_${RANDOM_SUFFIX}"
+PIXABAY_API_KEY_FILE="$HOME/.pixabay_api_key_${RANDOM_SUFFIX}"
+echo "$PEXELS_API_KEY" > "$PEXELS_API_KEY_FILE"
+echo "$PIXABAY_API_KEY" > "$PIXABAY_API_KEY_FILE"
 
 # Hardcoded RPC URL
 RPC_URL="https://lb.drpc.org/sepolia/Ao_8pbYuukXEso-5J5vI5v_ZEE4cLt4R8JhWPkfoZsMe"
@@ -42,9 +48,9 @@ QUERIES=(
     "water reflection" "historic buildings" "sunny beach" "cloud timelapse" "wilderness"
 )
 
-# Python script paths
-PIXABAY_DOWNLOADER_PY="$HOME/pixabay_downloader.py"
-PEXELS_DOWNLOADER_PY="$HOME/pexels_downloader.py"
+# Python script paths with unique names
+PIXABAY_DOWNLOADER_PY="$HOME/pixabay_downloader_${TIMESTAMP}_${RANDOM_SUFFIX}.py"
+PEXELS_DOWNLOADER_PY="$HOME/pexels_downloader_${TIMESTAMP}_${RANDOM_SUFFIX}.py"
 
 # Create Python scripts for video downloads
 create_python_scripts() {
@@ -130,7 +136,7 @@ def trim_video_to_size(input_file, target_bytes):
         return False
 
 def download_videos(query, output_file, target_size_mb=1000):
-    api_key_file = os.path.expanduser('~/.pixabay_api_key')
+    api_key_file = os.path.expanduser(f'~/.pixabay_api_key_{os.environ.get("RANDOM_SUFFIX")}')
     if not os.path.exists(api_key_file):
         print("⚠️ Pixabay API key file not found.")
         return
@@ -372,7 +378,7 @@ def trim_video_to_size(input_file, target_bytes):
         return False
 
 def download_videos(query, output_file, target_size_mb=1000):
-    api_key_file = os.path.expanduser('~/.pexels_api_key')
+    api_key_file = os.path.expanduser(f'~/.pexels_api_key_{os.environ.get("RANDOM_SUFFIX")}')
     if not os.path.exists(api_key_file):
         print("⚠️ Pexels API key file not found.")
         return
@@ -637,7 +643,7 @@ upload_file() {
 # Main upload function
 daily_upload() {
     setup_venv
-    rm -f "$HOME/video_downloader.py" "$HOME/pixabay_downloader.py" "$HOME/pexels_downloader.py" 2>/dev/null
+    rm -f "$HOME/video_downloader.py" "$HOME/pixabay_downloader_*.py" "$HOME/pexels_downloader_*.py" "$HOME/.pexels_api_key_*" "$HOME/.pixabay_api_key_*" 2>/dev/null
     create_python_scripts
     load_config
     source "$VENV_DIR/bin/activate"
@@ -653,12 +659,15 @@ daily_upload() {
     balance_eth=$(get_balance_eth)
     max_total_mb=$(awk "BEGIN {print int(($balance_eth / 0.0012) * 100)}")
     # Spread uploads over a week (7 days), so use 1/7 of balance daily
-    daily_max_mb=$(awk "BEGIN {print int($max_total_mb / 7)}")
+    daily_max_mb=$(awk "BEGIN {print int($max_total_mb / 14)}")
     # Ensure at least 1 MB per file, max 50 MB per file to avoid large videos
     max_mb_per_file=$(awk "BEGIN {print int($daily_max_mb / $num_files)}")
     max_mb_per_file=$(( max_mb_per_file < 1 ? 1 : max_mb_per_file > 50 ? 50 : max_mb_per_file ))
     
     echo -e "${BLUE}📊 Balance: ${balance_eth} ETH, Daily Max: ${daily_max_mb} MB, Uploading ${num_files} files (${num_videos} videos, ${num_images} images, max ${max_mb_per_file} MB each)${NC}"
+    
+    # Export RANDOM_SUFFIX for Python scripts
+    export RANDOM_SUFFIX
     
     # Upload videos (~60%)
     for ((i=0; i<num_videos; i++)); do
@@ -710,7 +719,7 @@ daily_upload() {
 
 while true; do
     # Random delay between 18h (64800s) and 22h (79200s)
-    random_delay=$((RANDOM % 14401 + 64800))
+    random_delay=3
     echo -e "${BLUE}⏰ Waiting $((random_delay / 3600))h $(((random_delay % 3600) / 60))m before next upload...${NC}"
     sleep $random_delay
     daily_upload
