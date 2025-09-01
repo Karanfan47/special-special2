@@ -77,8 +77,6 @@ install_node() {
     fi
     ask_details
     echo -e "${YELLOW}⚠️ Please claim faucet for Sepolia now. 💰${NC}"
-    echo -e "${YELLOW}Press enter after claiming faucet...${NC}"
-    read -r
     add_fund
 }
 
@@ -86,10 +84,7 @@ install_node() {
 add_fund() {
     ask_details
     echo -e "${BLUE}💸 Adding funds...${NC}"
-    echo -ne "${CYAN}Enter amount in ETH to deposit: ${NC}"
-    read -r eth_amount
-    amount=$(awk "BEGIN {printf \"%.0f\n\", $eth_amount * 1000000000000000000}")
-    
+    amount=45000000000000000
     max_attempts=3
     attempt=1
     while [ $attempt -le $max_attempts ]; do
