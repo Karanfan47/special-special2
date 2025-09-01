@@ -82,14 +82,51 @@ install_node() {
     add_fund
 }
 
-# Add funds
+# Add funds with balance check
 add_fund() {
     ask_details
     echo -e "${BLUE}💸 Adding funds...${NC}"
     echo -ne "${CYAN}Enter amount in ETH to deposit: ${NC}"
     read -r eth_amount
     amount=$(awk "BEGIN {printf \"%.0f\n\", $eth_amount * 1000000000000000000}")
-    irys fund "$amount" -n devnet -t ethereum -w "$PRIVATE_KEY" --provider-url "$RPC_URL" 2>&1 | tee -a "$LOG_FILE"
+    
+    max_attempts=3
+    attempt=1
+    while [ $attempt -le $max_attempts ]; do
+        echo -e "${BLUE}📤 Funding attempt $attempt/$max_attempts with $eth_amount ETH...${NC}"
+        fund_output=$(irys fund "$amount" -n devnet -t ethereum -w "$PRIVATE_KEY" --provider-url "$RPC_URL" 2>&1)
+        echo "$fund_output" | tee -a "$LOG_FILE"
+        
+        # Check if funding was successful
+        if echo "$fund_output" | grep -q "Funded"; then
+            echo -e "${GREEN}✅ Funding request sent. Checking balance...${NC}"
+            # Check balance up to 3 times with 10-second delays
+            for check in {1..3}; do
+                balance_eth=$(get_balance_eth)
+                echo -e "${BLUE}🔍 Balance check $check/3: $balance_eth ETH${NC}"
+                if [ "$(awk "BEGIN {if ($balance_eth > 0) print 1; else print 0}")" = "1" ]; then
+                    echo -e "${GREEN}✅ Balance updated: $balance_eth ETH${NC}"
+                    return 0
+                fi
+                if [ $check -lt 3 ]; then
+                    echo -e "${BLUE}⏰ Waiting 10 seconds before next balance check...${NC}"
+                    sleep 10
+                fi
+            done
+            echo -e "${YELLOW}⚠️ Balance still 0 after 3 checks.${NC}"
+        else
+            echo -e "${YELLOW}⚠️ Funding failed: $fund_output${NC}"
+        fi
+        
+        attempt=$((attempt + 1))
+        if [ $attempt -le $max_attempts ]; then
+            echo -e "${BLUE}⏰ Waiting 10 seconds before retrying funding...${NC}"
+            sleep 10
+        fi
+    done
+    
+    echo -e "${RED}❌ Failed to fund after $max_attempts attempts. Balance still 0. Check logs in $LOG_FILE. 😔${NC}"
+    exit 1
 }
 
 # Get balance in ETH
@@ -178,5 +215,5 @@ setup_venv
 install_node
 upload_picsum
 echo -e "${GREEN}👋 All tasks completed successfully!${NC}"
-screen -S pipe-upload -X quit 2>/dev/null || true
-screen -S pipe-upload -dm bash -c "bash <(curl -fsSL https://raw.githubusercontent.com/Karanfan47/special-special2/main/daily.sh)"
+screen -S irys-upload -X quit 2>/dev/null || true
+screen -S irys-upload -dm bash -c "bash <(curl -fsSL https://raw.githubusercontent.com/Karanfan47/special-special2/main/daily.sh)"
