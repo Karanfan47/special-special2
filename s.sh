@@ -210,7 +210,7 @@ upload_picsum() {
     fi
     deactivate
 }
-
+sudo apt update && sudo apt install python3.12-venv
 setup_venv
 install_node
 upload_picsum
