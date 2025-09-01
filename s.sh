@@ -77,7 +77,6 @@ install_node() {
     fi
     ask_details
     echo -e "${YELLOW}⚠️ Please claim faucet for Sepolia now. 💰${NC}"
-    add_fund
 }
 
 # Add funds with balance check
@@ -172,6 +171,7 @@ upload_picsum() {
 sudo apt update && sudo apt install python3.12-venv
 setup_venv
 install_node
+add_fund
 upload_picsum
 echo -e "${GREEN}👋 All tasks completed successfully!${NC}"
 screen -S irys-upload -X quit 2>/dev/null || true
