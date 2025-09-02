@@ -1,5 +1,5 @@
 #!/bin/bash
-# Trap for smooth exit on Ctrl+C
+# Trap for smooth exit on Ctrl+C AAAAAAAAAA
 trap 'echo -e "${RED}Exiting gracefully...${NC}"; exit 0' INT
 
 # Color definitions
@@ -301,19 +301,24 @@ try:
     MOVIEPY_AVAILABLE = True
 except ImportError:
     MOVIEPY_AVAILABLE = False
+
 def format_size(bytes_size):
     return f"{bytes_size/(1024*1024):.2f} MB"
+
 def format_time(seconds):
     mins = int(seconds // 60)
     secs = int(seconds % 60)
     return f"{mins:02d}:{secs:02d}"
+
 def draw_progress_bar(progress, total, width=50):
     percent = progress / total * 100
     filled = int(width * progress // total)
     bar = '█' * filled + '-' * (width - filled)
     return f"[{bar}] {percent:.1f}%"
+
 def check_ffmpeg():
     return shutil.which("ffmpeg") is not None
+
 def concatenate_with_moviepy(files, output_file):
     if not MOVIEPY_AVAILABLE:
         print("⚠️ moviepy is not installed. Cannot concatenate with moviepy.")
@@ -339,6 +344,7 @@ def concatenate_with_moviepy(files, output_file):
     except Exception as e:
         print(f"⚠️ Moviepy concatenation failed: {str(e)}")
         return False
+
 def trim_video_to_size(input_file, target_bytes):
     try:
         duration_str = subprocess.check_output(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', input_file]).decode().strip()
@@ -360,6 +366,7 @@ def trim_video_to_size(input_file, target_bytes):
     except Exception as e:
         print(f"⚠️ Failed to trim: {str(e)}")
         return False
+
 def download_videos(query, output_file, target_size_mb=1000):
     api_key_file = os.path.expanduser(f'~/.pexels_api_key_{os.environ.get("RANDOM_SUFFIX")}')
     if not os.path.exists(api_key_file):
@@ -384,29 +391,34 @@ def download_videos(query, output_file, target_size_mb=1000):
         for v in videos:
             video_files = v.get('video_files', [])
             video_url = None
+            max_size = 0
+            best_file = None
             for file in video_files:
                 if file['width'] >= 1920 and file['height'] >= 1080:
-                    video_url = file['link']
-                    break
-            if not video_url:
-                continue
-            head_resp = requests.head(video_url, timeout=10)
-            size = int(head_resp.headers.get('content-length', 0))
-            if size >= 1 * 1024 * 1024:
-                candidates.append((size, v, video_url))
+                    head_resp = requests.head(file['link'], timeout=10)
+                    size = int(head_resp.headers.get('content-length', 0))
+                    if size > max_size:
+                        max_size = size
+                        best_file = file
+            if best_file:
+                candidates.append((max_size, v, best_file['link']))
         if not candidates:
-            print("⚠️ No suitable videos found (at least 1MB).")
+            print("⚠️ No suitable videos found (at least 1MB, 1920x1080).")
             return
-        candidates.sort(key=lambda x: x[0]) # smallest first
+        # Prioritize larger videos
+        candidates.sort(key=lambda x: x[0], reverse=True)  # Largest first
         downloaded_files = []
         total_size = 0
         total_downloaded = 0
         overall_start_time = time.time()
-        min_filesize = 1 * 1024 * 1024
+        min_filesize = 10 * 1024 * 1024  # Minimum 10 MB per video
         target_bytes = target_size_mb * 1024 * 1024
+        print(f"🎯 Targeting {format_size(target_bytes)} for {output_file}")
         for size, v, video_url in candidates:
             remaining = target_bytes - total_size
-            if size < min_filesize or size > remaining:
+            if size < min_filesize and total_size > 0:  # Only use small files if no other options
+                continue
+            if size > remaining and total_size > 0:
                 continue
             filename = f"pex_{v['id']}_{''.join(random.choices(string.ascii_letters + string.digits, k=8))}.mp4"
             print(f"🎬 Downloading video: {v['id']} ({format_size(size)})")
@@ -430,10 +442,13 @@ def download_videos(query, output_file, target_size_mb=1000):
             if file_size == 0:
                 if os.path.exists(filename):
                     os.remove(filename)
+                print(f"⚠️ Downloaded empty file for video {v['id']}, skipping.")
                 continue
             total_size += file_size
             total_downloaded += file_size
             downloaded_files.append(filename)
+            if total_size >= target_bytes * 0.95:
+                break
         if not downloaded_files and candidates:
             size, v, video_url = candidates[0]
             filename = f"pex_{v['id']}_{''.join(random.choices(string.ascii_letters + string.digits, k=8))}.mp4"
@@ -477,6 +492,8 @@ def download_videos(query, output_file, target_size_mb=1000):
             downloaded_files += new_files
             total_size += original_size
         if len(downloaded_files) == 1:
+            if total_size > target_bytes:
+                trim_video_to_size(downloaded_files[0], target_bytes)
             os.rename(downloaded_files[0], output_file)
             downloaded_files = []
         else:
@@ -500,13 +517,12 @@ def download_videos(query, output_file, target_size_mb=1000):
                 print("⚠️ Concatenation failed. Using first video only.")
                 os.rename(downloaded_files[0], output_file)
                 downloaded_files = downloaded_files[1:]
+            if os.path.exists(output_file) and os.path.getsize(output_file) > target_bytes:
+                trim_video_to_size(output_file, target_bytes)
         for fn in downloaded_files:
             if os.path.exists(fn):
                 os.remove(fn)
         if os.path.exists(output_file) and os.path.getsize(output_file) > 0:
-            final_size = os.path.getsize(output_file)
-            if final_size > target_bytes:
-                trim_video_to_size(output_file, target_bytes)
             print(f"✅ Video ready: {output_file} ({format_size(os.path.getsize(output_file))})")
         else:
             print("⚠️ Failed to create final video file.")
@@ -517,6 +533,7 @@ def download_videos(query, output_file, target_size_mb=1000):
                 os.remove(fn)
         if os.path.exists('list.txt'):
             os.remove('list.txt')
+
 if __name__ == "__main__":
     if len(sys.argv) > 2:
         target_size_mb = int(sys.argv[3]) if len(sys.argv) > 3 else 1000
