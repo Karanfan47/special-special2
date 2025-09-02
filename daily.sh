@@ -719,8 +719,9 @@ daily_upload() {
 
 while true; do
     # Random delay between 18h (64800s) and 22h (79200s)
-    random_delay=3
+    random_delay=$((RANDOM % 14401 + 64800))
     echo -e "${BLUE}⏰ Waiting $((random_delay / 3600))h $(((random_delay % 3600) / 60))m before next upload...${NC}"
     sleep $random_delay
     daily_upload
 done
+
