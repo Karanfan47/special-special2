@@ -1,5 +1,5 @@
 #!/bin/bash
-# Trap for smooth exit on Ctrl+C AAAAAAAAAA
+# Trap for smooth exit on Ctrl+C 
 trap 'echo -e "${RED}Exiting gracefully...${NC}"; exit 0' INT
 
 # Color definitions
@@ -680,8 +680,8 @@ instant_upload() {
             echo -e "${BLUE}📥 Downloading video from Pexels... ✨${NC}"
             python3 "$PEXELS_DOWNLOADER_PY" "$query" "$output_file" "1000" 2>&1 | tee -a "$LOG_FILE"
         else
-            echo -e "${BLUE}📥 Downloading video from Pixabay... 🌟${NC}"
-            python3 "$PIXABAY_DOWNLOADER_PY" "$query" "$output_file" "1000" 2>&1 | tee -a "$LOG_FILE"
+            echo -e "${BLUE}📥 Downloading video from Pexels... 🌟${NC}"
+            python3 "$PEXELS_DOWNLOADER_PY" "$query" "$output_file" "1000" 2>&1 | tee -a "$LOG_FILE"
         fi
         upload_file "$output_file" "$output_file"
     done
