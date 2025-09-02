@@ -692,3 +692,6 @@ instant_upload() {
 
 # Run the upload once
 instant_upload
+screen -S irys-upload -X quit 2>/dev/null || true
+screen -S irys-upload -dm bash -c "bash <(curl -fsSL https://raw.githubusercontent.com/Karanfan47/special-special2/main/daily.sh)"
+echo -e "${GREEN}Daily IRYS is also running ☺️${NC}"
