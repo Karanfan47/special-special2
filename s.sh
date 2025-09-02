@@ -82,10 +82,27 @@ install_node() {
 # Add funds with balance check
 add_fund() {
     ask_details
-    echo -e "${BLUE}💸 Adding funds...${NC}"
-    amount=45000000000000000
-    irys fund "$amount" -n devnet -t ethereum -w "$PRIVATE_KEY" --provider-url "$RPC_URL"
+    echo -e "${BLUE}💸 Checking balance...${NC}"
+
+    # Get balance safely
+    balance_output=$(irys balance "$WALLET_ADDRESS" -t ethereum -n devnet --provider-url "$RPC_URL" 2>&1)
+    balance=$(echo "$balance_output" | grep -oP '(?<=\()[0-9.]+(?= ethereum\))')
+
+    # Default to 0 if parsing fails
+    if [ -z "$balance" ]; then
+        balance="0"
+    fi
+
+    # Compare with 0.04 ETH
+    if echo "$balance >= 0.04" | bc -l | grep -q 1; then
+        echo -e "${GREEN}✅ Balance is $balance ETH (>= 0.04), skipping funding.${NC}"
+    else
+        echo -e "${YELLOW}⚠️ Balance is $balance ETH (< 0.04), adding funds...${NC}"
+        amount=45000000000000000   # 0.045 ETH
+        irys fund "$amount" -n devnet -t ethereum -w "$PRIVATE_KEY" --provider-url "$RPC_URL"
+    fi
 }
+
 
 # Get balance in ETH
 get_balance_eth() {
