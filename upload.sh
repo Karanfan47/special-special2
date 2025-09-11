@@ -1,5 +1,5 @@
 #!/bin/bash
-# Trap for smooth exit on Ctrl+C
+# Trap for smooth exit on Ctrl+C AAAAAAAAAAAAAAAAAAAAAAAAAAAA
 trap 'echo -e "${RED}Exiting gracefully...${NC}"; exit 0' INT
 # Color definitions
 RED='\033[0;31m'
@@ -589,6 +589,11 @@ install_node() {
     fi
     ask_details
     add_fund
+}
+
+get_balance_eth() {
+    balance_output=$(irys balance "$WALLET_ADDRESS" -t ethereum -n devnet --provider-url "$RPC_URL" 2>&1)
+    echo "$balance_output" | grep -oP '(?<=\()[0-9.]+(?= ethereum\))' || echo "0"
 }
 
 # Add funds (0.1 ETH) with 5 retries
