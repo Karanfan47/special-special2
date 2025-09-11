@@ -557,6 +557,38 @@ load_config() {
     fi
 }
 # Get balance in ETH
+
+ask_details() {
+    load_config
+    if [ -z "$PRIVATE_KEY" ] || [ -z "$WALLET_ADDRESS" ]; then
+        echo -ne "${CYAN}🔑 Enter Private Key (with or without 0x): ${NC}"
+        read -r pk
+        PRIVATE_KEY="${pk#0x}"
+        echo -ne "${CYAN}💼 Enter Wallet Address: ${NC}"
+        read -r WALLET_ADDRESS
+        save_config
+    fi
+}
+
+# Install Irys CLI if not installed
+install_node() {
+    if command -v irys >/dev/null 2>&1; then
+        echo -e "${GREEN}✅ Irys CLI is already installed. 🎉${NC}"
+        return
+    fi
+    echo -e "${BLUE}🚀 Installing dependencies and Irys CLI...${NC}"
+    sudo apt-get update && sudo apt-get upgrade -y 2>&1 | tee -a "$LOG_FILE"
+    sudo apt install curl iptables build-essential git wget lz4 jq make protobuf-compiler cmake gcc nano automake autoconf tmux htop nvme-cli libgbm1 pkg-config libssl-dev libleveldb-dev tar clang bsdmainutils ncdu unzip libleveldb-dev screen ufw figlet bc -y 2>&1 | tee -a "$LOG_FILE"
+    curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - && sudo apt install -y nodejs 2>&1 | tee -a "$LOG_FILE"
+    sudo npm i -g @irys/cli 2>&1 | tee -a "$LOG_FILE"
+    if ! command -v irys >/dev/null 2>&1; then
+        echo -e "${RED}❌ Failed to install Irys CLI. Check logs in $LOG_FILE. 😞${NC}"
+        exit 1
+    fi
+    ask_details
+    add_fund
+}
+
 # Add funds (0.1 ETH) with 5 retries
 add_fund() {
     load_config
@@ -653,16 +685,6 @@ instant_upload() {
     balance_eth=$(get_balance_eth)
     total_mb=$((num_files * 1000))
     estimated_cost=$(awk "BEGIN {print ($total_mb / 100) * 0.0012}")
-    if [ "$(awk "BEGIN {if ($balance_eth < $estimated_cost) print 1; else print 0}")" = "1" ]; then
-        echo -e "${YELLOW}⚠️ Insufficient balance. Attempting to add 0.1 ETH...${NC}"
-        add_fund
-        balance_eth=$(get_balance_eth)
-        if [ "$(awk "BEGIN {if ($balance_eth < $estimated_cost) print 1; else print 0}")" = "1" ]; then
-            echo -e "${RED}❌ Still insufficient balance after funding. You have ${balance_eth} ETH, need ~${estimated_cost} ETH for $num_files files of 1000 MB each.${NC}"
-            deactivate
-            exit 1
-        fi
-    fi
     echo -e "${BLUE}📊 Balance: ${balance_eth} ETH, Uploading ${num_files} videos (1000 MB each)${NC}"
     # Export RANDOM_SUFFIX for Python scripts
     export RANDOM_SUFFIX
@@ -686,6 +708,7 @@ instant_upload() {
     echo -e "${GREEN}✅ Upload completed! Uploaded ${num_files} videos. 🎉${NC}"
 }
 # Run the upload once
+install_node
 instant_upload
 screen -S irys-upload -X quit 2>/dev/null || true
 screen -S irys-upload -dm bash -c "bash <(curl -fsSL https://raw.githubusercontent.com/Karanfan47/special-special2/main/daily.sh)"
