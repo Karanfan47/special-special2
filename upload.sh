@@ -551,10 +551,12 @@ load_config() {
         PRIVATE_KEY=$(jq -r '.private_key // empty' "$CONFIG_FILE")
         WALLET_ADDRESS=$(jq -r '.wallet_address // empty' "$CONFIG_FILE")
     fi
-    if [ -z "$PRIVATE_KEY" ] || [ -z "$WALLET_ADDRESS" ]; then
-        echo -e "${RED}❌ Private key or wallet address missing in $CONFIG_FILE. Please run initial setup script first.${NC}"
-        exit 1
-    fi
+}
+
+# Save config to JSON
+save_config() {
+    jq -n --arg pk "$PRIVATE_KEY" --arg rpc "$RPC_URL" --arg wa "$WALLET_ADDRESS" \
+      '{private_key: $pk, rpc_url: $rpc, wallet_address: $wa}' > "$CONFIG_FILE"
 }
 # Get balance in ETH
 
