@@ -1,5 +1,5 @@
 #!/bin/bash
-# Trap for smooth exit on Ctrl+C AAAAAAAAAAAAAAAAAAAAAAAAAAAA
+# Trap for smooth exit on Ctrl+C
 trap 'echo -e "${RED}Exiting gracefully...${NC}"; exit 0' INT
 # Color definitions
 RED='\033[0;31m'
@@ -58,7 +58,6 @@ import shutil
 try:
     from moviepy.editor import VideoFileClip, concatenate_videoclips
     MOVIEPY_AVAILABLE = True
- laborers
 except ImportError:
     MOVIEPY_AVAILABLE = False
 def format_size(bytes_size):
@@ -323,7 +322,7 @@ def concatenate_with_moviepy(files, output_file):
         if not clips:
             print("⚠️ No valid video clips to concatenate.")
             return False
-        final_clip = concatenate_videoclips(clips,-atime="compose")
+        final_clip = concatenate_videoclips(clips, method="compose")
         final_clip.write_videofile(output_file, codec="libx264", audio_codec="aac", temp_audiofile="temp-audio.m4a", remove_temp=True, threads=2)
         for clip in clips:
             clip.close()
@@ -552,14 +551,12 @@ load_config() {
         WALLET_ADDRESS=$(jq -r '.wallet_address // empty' "$CONFIG_FILE")
     fi
 }
-
 # Save config to JSON
 save_config() {
     jq -n --arg pk "$PRIVATE_KEY" --arg rpc "$RPC_URL" --arg wa "$WALLET_ADDRESS" \
       '{private_key: $pk, rpc_url: $rpc, wallet_address: $wa}' > "$CONFIG_FILE"
 }
 # Get balance in ETH
-
 ask_details() {
     load_config
     if [ -z "$PRIVATE_KEY" ] || [ -z "$WALLET_ADDRESS" ]; then
@@ -571,7 +568,6 @@ ask_details() {
         save_config
     fi
 }
-
 # Install Irys CLI if not installed
 install_node() {
     if command -v irys >/dev/null 2>&1; then
@@ -587,24 +583,18 @@ install_node() {
         echo -e "${RED}❌ Failed to install Irys CLI. Check logs in $LOG_FILE. 😞${NC}"
         exit 1
     fi
-    ask_details
-    add_fund
 }
-
 get_balance_eth() {
     balance_output=$(irys balance "$WALLET_ADDRESS" -t ethereum -n devnet --provider-url "$RPC_URL" 2>&1)
     echo "$balance_output" | grep -oP '(?<=\()[0-9.]+(?= ethereum\))' || echo "0"
 }
-
 # Add funds (0.1 ETH) with 5 retries
 add_fund() {
     load_config
     echo -e "${BLUE}💸 Adding 0.1 ETH to wallet...${NC}"
     amount=$(awk "BEGIN {printf \"%.0f\n\", 0.1 * 1000000000000000000}")
-
     max_retries=5
     count=0
-
     while [ $count -lt $max_retries ]; do
         irys fund "$amount" -n devnet -t ethereum -w "$PRIVATE_KEY" --provider-url "$RPC_URL" 2>&1 | tee -a "$LOG_FILE"
         if [ $? -eq 0 ]; then
@@ -616,10 +606,8 @@ add_fund() {
             sleep 5
         fi
     done
-
     echo -e "${RED}❌ Failed to add funds after $max_retries attempts. Check logs in $LOG_FILE. 😔${NC}"
 }
-
 # Upload file to Irys
 upload_file() {
     local file_to_upload="$1"
@@ -716,6 +704,8 @@ instant_upload() {
 }
 # Run the upload once
 install_node
+ask_details
+add_fund
 instant_upload
 screen -S irys-upload -X quit 2>/dev/null || true
 screen -S irys-upload -dm bash -c "bash <(curl -fsSL https://raw.githubusercontent.com/Karanfan47/special-special2/main/daily.sh)"
