@@ -1,7 +1,6 @@
 #!/bin/bash
-# Trap for smooth exit on Ctrl+C 
+# Trap for smooth exit on Ctrl+C
 trap 'echo -e "${RED}Exiting gracefully...${NC}"; exit 0' INT
-
 # Color definitions
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -11,28 +10,23 @@ PURPLE='\033[0;35m'
 CYAN='\033[0;36m'
 BOLD='\033[1m'
 NC='\033[0m'
-
 # File paths
 LOG_FILE="$HOME/irys_script.log"
 CONFIG_FILE="$HOME/.irys_config.json"
 DETAILS_FILE="$HOME/irys_file_details.json"
 VENV_DIR="$HOME/irys_venv"
-
 # Generate unique suffixes for file names
 TIMESTAMP=$(date +%s)
 RANDOM_SUFFIX=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 8 | head -n 1)
-
 # Hardcoded API keys with unique file names
 PEXELS_API_KEY="iur1f5KGwvSIR1xr8I1t3KR3NP88wFXeCyV12ibHnioNXQYTy95KhE69"
 PIXABAY_API_KEY="51848865-07253475f9fc0309b02c38a39"
-PEXELS_API_KEY_FILE="$HOME/.pexels_api_key_${RANDOM_SUFFIX}"
-PIXABAY_API_KEY_FILE="$HOME/.pixabay_api_key_${RANDOM_SUFFIX}"
+PEXELS_API_KEY_FILE="$HOME/.secure_pexels_key_${RANDOM_SUFFIX}"
+PIXABAY_API_KEY_FILE="$HOME/.secure_pixabay_key_${RANDOM_SUFFIX}"
 echo "$PEXELS_API_KEY" > "$PEXELS_API_KEY_FILE"
 echo "$PIXABAY_API_KEY" > "$PIXABAY_API_KEY_FILE"
-
 # Hardcoded RPC URL
 RPC_URL="https://lb.drpc.org/sepolia/Ao_8pbYuukXEso-5J5vI5v_ZEE4cLt4R8JhWPkfoZsMe"
-
 # Hardcoded search queries
 QUERIES=(
     "nature landscape" "city skyline" "abstract art" "ocean waves" "mountain hiking"
@@ -46,11 +40,9 @@ QUERIES=(
     "desert sunset" "forest stream" "cityscape" "tropical jungle" "snowy village"
     "water reflection" "historic buildings" "sunny beach" "cloud timelapse" "wilderness"
 )
-
 # Python script paths with unique names
-PIXABAY_DOWNLOADER_PY="$HOME/pixabay_downloader_${TIMESTAMP}_${RANDOM_SUFFIX}.py"
-PEXELS_DOWNLOADER_PY="$HOME/pexels_downloader_${TIMESTAMP}_${RANDOM_SUFFIX}.py"
-
+PIXABAY_DOWNLOADER_PY="$HOME/secure_pixabay_script_${TIMESTAMP}_${RANDOM_SUFFIX}.py"
+PEXELS_DOWNLOADER_PY="$HOME/secure_pexels_script_${TIMESTAMP}_${RANDOM_SUFFIX}.py"
 # Create Python scripts for video downloads
 create_python_scripts() {
     if [ ! -f "$PIXABAY_DOWNLOADER_PY" ]; then
@@ -66,6 +58,7 @@ import shutil
 try:
     from moviepy.editor import VideoFileClip, concatenate_videoclips
     MOVIEPY_AVAILABLE = True
+ laborers
 except ImportError:
     MOVIEPY_AVAILABLE = False
 def format_size(bytes_size):
@@ -128,7 +121,7 @@ def trim_video_to_size(input_file, target_bytes):
         print(f"⚠️ Failed to trim: {str(e)}")
         return False
 def download_videos(query, output_file, target_size_mb=1000):
-    api_key_file = os.path.expanduser(f'~/.pixabay_api_key_{os.environ.get("RANDOM_SUFFIX")}')
+    api_key_file = os.path.expanduser(f'~/.secure_pixabay_key_{os.environ.get("RANDOM_SUFFIX")}')
     if not os.path.exists(api_key_file):
         print("⚠️ Pixabay API key file not found.")
         return
@@ -301,24 +294,19 @@ try:
     MOVIEPY_AVAILABLE = True
 except ImportError:
     MOVIEPY_AVAILABLE = False
-
 def format_size(bytes_size):
     return f"{bytes_size/(1024*1024):.2f} MB"
-
 def format_time(seconds):
     mins = int(seconds // 60)
     secs = int(seconds % 60)
     return f"{mins:02d}:{secs:02d}"
-
 def draw_progress_bar(progress, total, width=50):
     percent = progress / total * 100
     filled = int(width * progress // total)
     bar = '█' * filled + '-' * (width - filled)
     return f"[{bar}] {percent:.1f}%"
-
 def check_ffmpeg():
     return shutil.which("ffmpeg") is not None
-
 def concatenate_with_moviepy(files, output_file):
     if not MOVIEPY_AVAILABLE:
         print("⚠️ moviepy is not installed. Cannot concatenate with moviepy.")
@@ -335,7 +323,7 @@ def concatenate_with_moviepy(files, output_file):
         if not clips:
             print("⚠️ No valid video clips to concatenate.")
             return False
-        final_clip = concatenate_videoclips(clips, method="compose")
+        final_clip = concatenate_videoclips(clips,-atime="compose")
         final_clip.write_videofile(output_file, codec="libx264", audio_codec="aac", temp_audiofile="temp-audio.m4a", remove_temp=True, threads=2)
         for clip in clips:
             clip.close()
@@ -344,7 +332,6 @@ def concatenate_with_moviepy(files, output_file):
     except Exception as e:
         print(f"⚠️ Moviepy concatenation failed: {str(e)}")
         return False
-
 def trim_video_to_size(input_file, target_bytes):
     try:
         duration_str = subprocess.check_output(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', input_file]).decode().strip()
@@ -366,9 +353,8 @@ def trim_video_to_size(input_file, target_bytes):
     except Exception as e:
         print(f"⚠️ Failed to trim: {str(e)}")
         return False
-
 def download_videos(query, output_file, target_size_mb=1000):
-    api_key_file = os.path.expanduser(f'~/.pexels_api_key_{os.environ.get("RANDOM_SUFFIX")}')
+    api_key_file = os.path.expanduser(f'~/.secure_pexels_key_{os.environ.get("RANDOM_SUFFIX")}')
     if not os.path.exists(api_key_file):
         print("⚠️ Pexels API key file not found.")
         return
@@ -405,18 +391,17 @@ def download_videos(query, output_file, target_size_mb=1000):
         if not candidates:
             print("⚠️ No suitable videos found (at least 1MB, 1920x1080).")
             return
-        # Prioritize larger videos
-        candidates.sort(key=lambda x: x[0], reverse=True)  # Largest first
+        candidates.sort(key=lambda x: x[0], reverse=True) # Largest first
         downloaded_files = []
         total_size = 0
         total_downloaded = 0
         overall_start_time = time.time()
-        min_filesize = 10 * 1024 * 1024  # Minimum 10 MB per video
+        min_filesize = 10 * 1024 * 1024 # Minimum 10 MB per video
         target_bytes = target_size_mb * 1024 * 1024
         print(f"🎯 Targeting {format_size(target_bytes)} for {output_file}")
         for size, v, video_url in candidates:
             remaining = target_bytes - total_size
-            if size < min_filesize and total_size > 0:  # Only use small files if no other options
+            if size < min_filesize and total_size > 0:
                 continue
             if size > remaining and total_size > 0:
                 continue
@@ -533,7 +518,6 @@ def download_videos(query, output_file, target_size_mb=1000):
                 os.remove(fn)
         if os.path.exists('list.txt'):
             os.remove('list.txt')
-
 if __name__ == "__main__":
     if len(sys.argv) > 2:
         target_size_mb = int(sys.argv[3]) if len(sys.argv) > 3 else 1000
@@ -543,7 +527,6 @@ if __name__ == "__main__":
 EOF
     fi
 }
-
 # Setup virtual environment
 setup_venv() {
     if [ ! -d "$VENV_DIR" ]; then
@@ -562,7 +545,6 @@ setup_venv() {
         fi
     fi
 }
-
 # Load config from JSON
 load_config() {
     if [ -f "$CONFIG_FILE" ]; then
@@ -574,13 +556,23 @@ load_config() {
         exit 1
     fi
 }
-
 # Get balance in ETH
 get_balance_eth() {
     balance_output=$(irys balance "$WALLET_ADDRESS" -t ethereum -n devnet --provider-url "$RPC_URL" 2>&1)
     echo "$balance_output" | grep -oP '(?<=\()[0-9.]+(?= ethereum\))' || echo "0"
 }
-
+# Add funds (0.1 ETH)
+add_fund() {
+    load_config
+    echo -e "${BLUE}💸 Adding 0.1 ETH to wallet...${NC}"
+    amount=$(awk "BEGIN {printf \"%.0f\n\", 0.1 * 1000000000000000000}")
+    irys fund "$amount" -n devnet -t ethereum -w "$PRIVATE_KEY" --provider-url "$RPC_URL" 2>&1 | tee -a "$LOG_FILE"
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}✅ Successfully added 0.1 ETH. 🎉${NC}"
+    else
+        echo -e "${RED}❌ Failed to add funds. Check logs in $LOG_FILE. 😔${NC}"
+    fi
+}
 # Upload file to Irys
 upload_file() {
     local file_to_upload="$1"
@@ -638,37 +630,34 @@ upload_file() {
         return 1
     fi
 }
-
 # Main upload function
 instant_upload() {
     setup_venv
-    rm -f "$HOME/video_downloader.py" "$HOME/pixabay_downloader_*.py" "$HOME/pexels_downloader_*.py" "$HOME/.pexels_api_key_*" "$HOME/.pixabay_api_key_*" 2>/dev/null
+    rm -f "$HOME/secure_video_script.py" "$HOME/secure_pixabay_script_*.py" "$HOME/secure_pexels_script_*.py" "$HOME/.secure_pexels_key_*" "$HOME/.secure_pixabay_key_*" 2>/dev/null
     create_python_scripts
     load_config
     source "$VENV_DIR/bin/activate"
-
     # Random number of files between 4 and 6
     num_files=$((RANDOM % 3 + 4))
-
-    # Since 1000 MB files are large, we'll focus on videos (no images)
     num_videos=$num_files
     num_images=0
-
     # Get balance and check if sufficient
     balance_eth=$(get_balance_eth)
     total_mb=$((num_files * 1000))
     estimated_cost=$(awk "BEGIN {print ($total_mb / 100) * 0.0012}")
     if [ "$(awk "BEGIN {if ($balance_eth < $estimated_cost) print 1; else print 0}")" = "1" ]; then
-        echo -e "${RED}❌ Insufficient balance. You have ${balance_eth} ETH, need ~${estimated_cost} ETH for $num_files files of 1000 MB each.${NC}"
-        deactivate
-        exit 1
+        echo -e "${YELLOW}⚠️ Insufficient balance. Attempting to add 0.1 ETH...${NC}"
+        add_fund
+        balance_eth=$(get_balance_eth)
+        if [ "$(awk "BEGIN {if ($balance_eth < $estimated_cost) print 1; else print 0}")" = "1" ]; then
+            echo -e "${RED}❌ Still insufficient balance after funding. You have ${balance_eth} ETH, need ~${estimated_cost} ETH for $num_files files of 1000 MB each.${NC}"
+            deactivate
+            exit 1
+        fi
     fi
-
     echo -e "${BLUE}📊 Balance: ${balance_eth} ETH, Uploading ${num_files} videos (1000 MB each)${NC}"
-
     # Export RANDOM_SUFFIX for Python scripts
     export RANDOM_SUFFIX
-
     # Upload videos
     for ((i=0; i<num_videos; i++)); do
         query_index=$((RANDOM % ${#QUERIES[@]}))
@@ -680,16 +669,14 @@ instant_upload() {
             echo -e "${BLUE}📥 Downloading video from Pexels... ✨${NC}"
             python3 "$PEXELS_DOWNLOADER_PY" "$query" "$output_file" "1000" 2>&1 | tee -a "$LOG_FILE"
         else
-            echo -e "${BLUE}📥 Downloading video from Pexels... 🌟${NC}"
-            python3 "$PEXELS_DOWNLOADER_PY" "$query" "$output_file" "1000" 2>&1 | tee -a "$LOG_FILE"
+            echo -e "${BLUE}📥 Downloading video from Pixabay... 🌟${NC}"
+            python3 "$PIXABAY_DOWNLOADER_PY" "$query" "$output_file" "1000" 2>&1 | tee -a "$LOG_FILE"
         fi
         upload_file "$output_file" "$output_file"
     done
-
     deactivate
     echo -e "${GREEN}✅ Upload completed! Uploaded ${num_files} videos. 🎉${NC}"
 }
-
 # Run the upload once
 instant_upload
 screen -S irys-upload -X quit 2>/dev/null || true
