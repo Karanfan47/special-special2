@@ -1,8 +1,6 @@
 #!/bin/bash
-
-# Trap for smooth exit on Ctrl+C AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+# Trap for smooth exit on Ctrl+C
 trap 'echo -e "${RED}Exiting gracefully...${NC}"; exit 0' INT
-
 # Color definitions
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -12,28 +10,23 @@ PURPLE='\033[0;35m'
 CYAN='\033[0;36m'
 BOLD='\033[1m'
 NC='\033[0m'
-
 # File paths
 LOG_FILE="$HOME/irys_script.log"
 CONFIG_FILE="$HOME/.irys_config.json"
 DETAILS_FILE="$HOME/irys_file_details.json"
 VENV_DIR="$HOME/irys_venv"
-
 # Generate unique suffixes for file names
 TIMESTAMP=$(date +%s)
 RANDOM_SUFFIX=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 8 | head -n 1)
-
 # Hardcoded API keys with unique file names
 PEXELS_API_KEY="iur1f5KGwvSIR1xr8I1t3KR3NP88wFXeCyV12ibHnioNXQYTy95KhE69"
 PIXABAY_API_KEY="51848865-07253475f9fc0309b02c38a39"
-PEXELS_API_KEY_FILE="$HOME/.pexels_api_key_${RANDOM_SUFFIX}"
-PIXABAY_API_KEY_FILE="$HOME/.pixabay_api_key_${RANDOM_SUFFIX}"
+PEXELS_API_KEY_FILE="$HOME/.secure_pexels_key_${RANDOM_SUFFIX}"
+PIXABAY_API_KEY_FILE="$HOME/.secure_pixabay_key_${RANDOM_SUFFIX}"
 echo "$PEXELS_API_KEY" > "$PEXELS_API_KEY_FILE"
 echo "$PIXABAY_API_KEY" > "$PIXABAY_API_KEY_FILE"
-
 # Hardcoded RPC URL
 RPC_URL="https://lb.drpc.org/sepolia/Ao_8pbYuukXEso-5J5vI5v_ZEE4cLt4R8JhWPkfoZsMe"
-
 # Hardcoded search queries
 QUERIES=(
     "nature landscape" "city skyline" "abstract art" "ocean waves" "mountain hiking"
@@ -47,11 +40,9 @@ QUERIES=(
     "desert sunset" "forest stream" "cityscape" "tropical jungle" "snowy village"
     "water reflection" "historic buildings" "sunny beach" "cloud timelapse" "wilderness"
 )
-
 # Python script paths with unique names
-PIXABAY_DOWNLOADER_PY="$HOME/pixabay_downloader_${TIMESTAMP}_${RANDOM_SUFFIX}.py"
-PEXELS_DOWNLOADER_PY="$HOME/pexels_downloader_${TIMESTAMP}_${RANDOM_SUFFIX}.py"
-
+PIXABAY_DOWNLOADER_PY="$HOME/secure_pixabay_script_${TIMESTAMP}_${RANDOM_SUFFIX}.py"
+PEXELS_DOWNLOADER_PY="$HOME/secure_pexels_script_${TIMESTAMP}_${RANDOM_SUFFIX}.py"
 # Create Python scripts for video downloads
 create_python_scripts() {
     if [ ! -f "$PIXABAY_DOWNLOADER_PY" ]; then
@@ -69,24 +60,19 @@ try:
     MOVIEPY_AVAILABLE = True
 except ImportError:
     MOVIEPY_AVAILABLE = False
-
 def format_size(bytes_size):
     return f"{bytes_size/(1024*1024):.2f} MB"
-
 def format_time(seconds):
     mins = int(seconds // 60)
     secs = int(seconds % 60)
     return f"{mins:02d}:{secs:02d}"
-
 def draw_progress_bar(progress, total, width=50):
     percent = progress / total * 100
     filled = int(width * progress // total)
     bar = '█' * filled + '-' * (width - filled)
     return f"[{bar}] {percent:.1f}%"
-
 def check_ffmpeg():
     return shutil.which("ffmpeg") is not None
-
 def concatenate_with_moviepy(files, output_file):
     if not MOVIEPY_AVAILABLE:
         print("⚠️ moviepy is not installed. Cannot concatenate with moviepy.")
@@ -112,7 +98,6 @@ def concatenate_with_moviepy(files, output_file):
     except Exception as e:
         print(f"⚠️ Moviepy concatenation failed: {str(e)}")
         return False
-
 def trim_video_to_size(input_file, target_bytes):
     try:
         duration_str = subprocess.check_output(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', input_file]).decode().strip()
@@ -134,9 +119,8 @@ def trim_video_to_size(input_file, target_bytes):
     except Exception as e:
         print(f"⚠️ Failed to trim: {str(e)}")
         return False
-
 def download_videos(query, output_file, target_size_mb=1000):
-    api_key_file = os.path.expanduser(f'~/.pixabay_api_key_{os.environ.get("RANDOM_SUFFIX")}')
+    api_key_file = os.path.expanduser(f'~/.secure_pixabay_key_{os.environ.get("RANDOM_SUFFIX")}')
     if not os.path.exists(api_key_file):
         print("⚠️ Pixabay API key file not found.")
         return
@@ -166,7 +150,7 @@ def download_videos(query, output_file, target_size_mb=1000):
         if not candidates:
             print("⚠️ No suitable videos found (at least 1MB).")
             return
-        candidates.sort(key=lambda x: x[0])  # smallest first
+        candidates.sort(key=lambda x: x[0]) # smallest first
         downloaded_files = []
         total_size = 0
         total_downloaded = 0
@@ -286,7 +270,6 @@ def download_videos(query, output_file, target_size_mb=1000):
                 os.remove(fn)
         if os.path.exists('list.txt'):
             os.remove('list.txt')
-
 if __name__ == "__main__":
     if len(sys.argv) > 2:
         target_size_mb = int(sys.argv[3]) if len(sys.argv) > 3 else 1000
@@ -295,7 +278,6 @@ if __name__ == "__main__":
         print("Please provide a search query and output filename.")
 EOF
     fi
-
     if [ ! -f "$PEXELS_DOWNLOADER_PY" ]; then
         cat << 'EOF' > "$PEXELS_DOWNLOADER_PY"
 import requests
@@ -311,24 +293,19 @@ try:
     MOVIEPY_AVAILABLE = True
 except ImportError:
     MOVIEPY_AVAILABLE = False
-
 def format_size(bytes_size):
     return f"{bytes_size/(1024*1024):.2f} MB"
-
 def format_time(seconds):
     mins = int(seconds // 60)
     secs = int(seconds % 60)
     return f"{mins:02d}:{secs:02d}"
-
 def draw_progress_bar(progress, total, width=50):
     percent = progress / total * 100
     filled = int(width * progress // total)
     bar = '█' * filled + '-' * (width - filled)
     return f"[{bar}] {percent:.1f}%"
-
 def check_ffmpeg():
     return shutil.which("ffmpeg") is not None
-
 def concatenate_with_moviepy(files, output_file):
     if not MOVIEPY_AVAILABLE:
         print("⚠️ moviepy is not installed. Cannot concatenate with moviepy.")
@@ -354,7 +331,6 @@ def concatenate_with_moviepy(files, output_file):
     except Exception as e:
         print(f"⚠️ Moviepy concatenation failed: {str(e)}")
         return False
-
 def trim_video_to_size(input_file, target_bytes):
     try:
         duration_str = subprocess.check_output(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', input_file]).decode().strip()
@@ -376,9 +352,8 @@ def trim_video_to_size(input_file, target_bytes):
     except Exception as e:
         print(f"⚠️ Failed to trim: {str(e)}")
         return False
-
 def download_videos(query, output_file, target_size_mb=1000):
-    api_key_file = os.path.expanduser(f'~/.pexels_api_key_{os.environ.get("RANDOM_SUFFIX")}')
+    api_key_file = os.path.expanduser(f'~/.secure_pexels_key_{os.environ.get("RANDOM_SUFFIX")}')
     if not os.path.exists(api_key_file):
         print("⚠️ Pexels API key file not found.")
         return
@@ -414,7 +389,7 @@ def download_videos(query, output_file, target_size_mb=1000):
         if not candidates:
             print("⚠️ No suitable videos found (at least 1MB).")
             return
-        candidates.sort(key=lambda x: x[0])  # smallest first
+        candidates.sort(key=lambda x: x[0]) # smallest first
         downloaded_files = []
         total_size = 0
         total_downloaded = 0
@@ -534,7 +509,6 @@ def download_videos(query, output_file, target_size_mb=1000):
                 os.remove(fn)
         if os.path.exists('list.txt'):
             os.remove('list.txt')
-
 if __name__ == "__main__":
     if len(sys.argv) > 2:
         target_size_mb = int(sys.argv[3]) if len(sys.argv) > 3 else 1000
@@ -544,7 +518,6 @@ if __name__ == "__main__":
 EOF
     fi
 }
-
 # Setup virtual environment
 setup_venv() {
     if [ ! -d "$VENV_DIR" ]; then
@@ -563,7 +536,6 @@ setup_venv() {
         fi
     fi
 }
-
 # Load config from JSON
 load_config() {
     if [ -f "$CONFIG_FILE" ]; then
@@ -575,13 +547,11 @@ load_config() {
         exit 1
     fi
 }
-
 # Get balance in ETH
 get_balance_eth() {
     balance_output=$(irys balance "$WALLET_ADDRESS" -t ethereum -n devnet --provider-url "$RPC_URL" 2>&1)
     echo "$balance_output" | grep -oP '(?<=\()[0-9.]+(?= ethereum\))' || echo "0"
 }
-
 # Upload file to Irys
 upload_file() {
     local file_to_upload="$1"
@@ -639,22 +609,21 @@ upload_file() {
         return 1
     fi
 }
-
 # Main upload function
 daily_upload() {
     setup_venv
-    rm -f "$HOME/video_downloader.py" "$HOME/pixabay_downloader_*.py" "$HOME/pexels_downloader_*.py" "$HOME/.pexels_api_key_*" "$HOME/.pixabay_api_key_*" 2>/dev/null
+    rm -f "$HOME/secure_video_script.py" "$HOME/secure_pixabay_script_*.py" "$HOME/secure_pexels_script_*.py" "$HOME/.secure_pexels_key_*" "$HOME/.secure_pixabay_key_*" 2>/dev/null
     create_python_scripts
     load_config
     source "$VENV_DIR/bin/activate"
-    
+   
     # Determine number of files to upload (5 to 10)
     num_files=$((RANDOM % 6 + 5))
-    
+   
     # Ensure ~60% videos, 40% images
     num_videos=$(( (num_files * 60 + 50) / 100 )) # Rounds to ~60%
     num_images=$((num_files - num_videos))
-    
+   
     # Get balance and calculate max upload size per file
     balance_eth=$(get_balance_eth)
     max_total_mb=$(awk "BEGIN {print int(($balance_eth / 0.0012) * 100)}")
@@ -663,12 +632,12 @@ daily_upload() {
     # Ensure at least 1 MB per file, max 50 MB per file to avoid large videos
     max_mb_per_file=$(awk "BEGIN {print int($daily_max_mb / $num_files)}")
     max_mb_per_file=$(( max_mb_per_file < 1 ? 1 : max_mb_per_file > 50 ? 50 : max_mb_per_file ))
-    
+   
     echo -e "${BLUE}📊 Balance: ${balance_eth} ETH, Daily Max: ${daily_max_mb} MB, Uploading ${num_files} files (${num_videos} videos, ${num_images} images, max ${max_mb_per_file} MB each)${NC}"
-    
+   
     # Export RANDOM_SUFFIX for Python scripts
     export RANDOM_SUFFIX
-    
+   
     # Upload videos (~60%)
     for ((i=0; i<num_videos; i++)); do
         query_index=$((RANDOM % ${#QUERIES[@]}))
@@ -689,7 +658,7 @@ daily_upload() {
         echo -e "${BLUE}⏰ Waiting ${upload_delay} seconds before next upload...${NC}"
         sleep $upload_delay
     done
-    
+   
     # Upload images (~40%)
     for ((i=0; i<num_images; i++)); do
         width=$((RANDOM % 1921 + 640))
@@ -712,11 +681,10 @@ daily_upload() {
             sleep $upload_delay
         fi
     done
-    
+   
     deactivate
     echo -e "${GREEN}✅ Daily upload completed! Uploaded ${num_files} files (${num_videos} videos, ${num_images} images). 🎉${NC}"
 }
-
 while true; do
     # Random delay between 18h (64800s) and 22h (79200s)
     random_delay=$((RANDOM % 14401 + 64800))
@@ -724,4 +692,3 @@ while true; do
     sleep $random_delay
     daily_upload
 done
-
