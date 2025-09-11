@@ -557,22 +557,30 @@ load_config() {
     fi
 }
 # Get balance in ETH
-get_balance_eth() {
-    balance_output=$(irys balance "$WALLET_ADDRESS" -t ethereum -n devnet --provider-url "$RPC_URL" 2>&1)
-    echo "$balance_output" | grep -oP '(?<=\()[0-9.]+(?= ethereum\))' || echo "0"
-}
-# Add funds (0.1 ETH)
+# Add funds (0.1 ETH) with 5 retries
 add_fund() {
     load_config
     echo -e "${BLUE}💸 Adding 0.1 ETH to wallet...${NC}"
     amount=$(awk "BEGIN {printf \"%.0f\n\", 0.1 * 1000000000000000000}")
-    irys fund "$amount" -n devnet -t ethereum -w "$PRIVATE_KEY" --provider-url "$RPC_URL" 2>&1 | tee -a "$LOG_FILE"
-    if [ $? -eq 0 ]; then
-        echo -e "${GREEN}✅ Successfully added 0.1 ETH. 🎉${NC}"
-    else
-        echo -e "${RED}❌ Failed to add funds. Check logs in $LOG_FILE. 😔${NC}"
-    fi
+
+    max_retries=5
+    count=0
+
+    while [ $count -lt $max_retries ]; do
+        irys fund "$amount" -n devnet -t ethereum -w "$PRIVATE_KEY" --provider-url "$RPC_URL" 2>&1 | tee -a "$LOG_FILE"
+        if [ $? -eq 0 ]; then
+            echo -e "${GREEN}✅ Successfully added 0.1 ETH. 🎉${NC}"
+            return 0
+        else
+            count=$((count+1))
+            echo -e "${YELLOW}⚠️ Attempt $count failed. Retrying in 5 seconds...${NC}"
+            sleep 5
+        fi
+    done
+
+    echo -e "${RED}❌ Failed to add funds after $max_retries attempts. Check logs in $LOG_FILE. 😔${NC}"
 }
+
 # Upload file to Irys
 upload_file() {
     local file_to_upload="$1"
