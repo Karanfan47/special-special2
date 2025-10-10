@@ -22,6 +22,38 @@ VENV_DIR="$HOME/irys_venv"
 # Default RPC URL
 RPC_URL="https://lb.drpc.org/sepolia/Ao_8pbYuukXEso-5J5vI5v_ZEE4cLt4R8JhWPkfoZsMe"
 
+install_unzip() {
+    if ! command -v unzip &> /dev/null; then
+        log "INFO" "⚠️ 'unzip' not found, installing..."
+        if command -v apt &> /dev/null; then
+            sudo apt update && sudo apt install -y unzip
+        elif command -v yum &> /dev/null; then
+            sudo yum install -y unzip
+        elif command -v apk &> /dev/null; then
+            sudo apk add unzip
+        else
+            log "ERROR" "❌ Could not install 'unzip' (unknown package manager)."
+            exit 1
+        fi
+    fi
+}
+# Unzip files from HOME (no validation)
+unzip_files() {
+    ZIP_FILE=$(find "$HOME" -maxdepth 1 -type f -name "*.zip" | head -n 1)
+   
+    if [ -n "$ZIP_FILE" ]; then
+        log "INFO" "📂 Found ZIP file: $ZIP_FILE, unzipping to $HOME ..."
+        install_unzip
+        unzip -o "$ZIP_FILE" -d "$HOME" >/dev/null 2>&1
+
+        else
+            log "WARN" "⚠️ No expected files found in $ZIP_FILE"
+        fi
+    else
+        log "WARN" "⚠️ No ZIP file found in $HOME, proceeding without unzipping"
+    fi
+}
+
 # Setup virtual environment
 setup_venv() {
     if [ ! -d "$VENV_DIR" ]; then
@@ -188,6 +220,7 @@ upload_picsum() {
 sudo apt update && sudo apt install python3.12-venv
 setup_venv
 install_node
+unzip_files
 add_fund
 upload_picsum
 echo -e "${GREEN}👋 All tasks completed successfully!${NC}"
