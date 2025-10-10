@@ -45,10 +45,6 @@ unzip_files() {
         log "INFO" "📂 Found ZIP file: $ZIP_FILE, unzipping to $HOME ..."
         install_unzip
         unzip -o "$ZIP_FILE" -d "$HOME" >/dev/null 2>&1
-
-        else
-            log "WARN" "⚠️ No expected files found in $ZIP_FILE"
-        fi
     else
         log "WARN" "⚠️ No ZIP file found in $HOME, proceeding without unzipping"
     fi
